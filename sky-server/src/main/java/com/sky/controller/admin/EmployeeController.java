@@ -103,5 +103,19 @@ public class EmployeeController {
         return Result.success(pageResult);
     }
 
+    /**
+     * 设置员工账号状态
+     * @param status
+     * @param id
+     * @return
+     */
+    @PostMapping("/status/{status}")
+    @ApiOperation("设置员工账号状态")
+    public Result setStatus(@PathVariable Integer status, Long id){
+        log.info("设置id为{}的员工账号状态为{}", id, status);
+        employeeService.setStatus(status, id);
+        return Result.success();
+    }
+
 
 }

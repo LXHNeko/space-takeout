@@ -115,5 +115,15 @@ public class EmployeeServiceImpl implements EmployeeService {
         List<Employee> records = pageData.getResult();
         return new PageResult(total, records);
     }
+    /**
+     * 设置员工账号状态
+     * @param status
+     * @param id
+     * @return
+     */
+    @Override
+    public void setStatus(Integer status, Long id) {
+        employeeMapper.updateStatusById(status, id);
+    }
 
 }
