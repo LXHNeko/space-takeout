@@ -123,7 +123,41 @@ public class EmployeeServiceImpl implements EmployeeService {
      */
     @Override
     public void setStatus(Integer status, Long id) {
-        employeeMapper.updateStatusById(status, id);
+        Employee employee = Employee.builder()
+                .status(status)
+                .id(id)
+                .updateTime(LocalDateTime.now())
+                .updateUser(BaseContext.getCurrentId())
+                .build();
+        employeeMapper.update(employee);
+    }
+    /**
+     * 根据ID查询员工
+     * @param id
+     * @return
+     */
+    @Override
+    public Employee getEmployeeById(Long id) {
+        Employee employee = employeeMapper.getEmployeeById(id);
+        //即使密码是加密后的，也最好二次屏蔽掉，更安全
+        employee.setPassword("*");
+        return employee;
+    }
+
+    /**
+     * 更新员工
+     * @param employeeDTO
+     * @return
+     */
+    @Override
+    public void update(EmployeeDTO employeeDTO) {
+        Employee employee = new Employee();
+        BeanUtils.copyProperties(employeeDTO, employee);
+
+        employee.setUpdateTime(LocalDateTime.now());
+        employee.setUpdateUser(BaseContext.getCurrentId());
+
+        employeeMapper.update(employee);
     }
 
 }

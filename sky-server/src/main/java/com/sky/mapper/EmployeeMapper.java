@@ -36,11 +36,17 @@ public interface EmployeeMapper {
     Page<Employee> page(EmployeePageQueryDTO employeePageQueryDTO);
 
     /**
-     * 设置员工账号状态
-     * @param status
+     * 更新员工
+     * @param employee
+     * @return
+     */
+    void update(Employee employee);
+
+    /**
+     * 根据ID查询员工
      * @param id
      * @return
      */
-    @Update("update employee set status = #{status} where id = #{id}")
-    void updateStatusById(Integer status, Long id);
+    @Select("select * from employee where id = #{id}")
+    Employee getEmployeeById(Long id);
 }
