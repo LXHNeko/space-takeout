@@ -30,8 +30,8 @@ public class Setmeal implements Serializable {
     //套餐价格
     private BigDecimal price;
 
-    //状态 0:停用 1:启用
-    private Integer status;
+    //状态 0:停用 1:启用  默认停用
+    private Integer status = 0;
 
     //描述信息
     private String description;
