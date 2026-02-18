@@ -4,6 +4,7 @@ import com.sky.dto.SetmealDTO;
 import com.sky.dto.SetmealPageQueryDTO;
 import com.sky.mapper.SetmealMapper;
 import com.sky.result.PageResult;
+import com.sky.vo.SetmealVO;
 
 import java.util.List;
 
@@ -27,4 +28,17 @@ public interface SetmealService {
      * @param ids
      */
     void deleteByIds(List<Long> ids);
+
+    /**
+     * 根据ID查询套餐
+     * @param id
+     * @return
+     */
+    SetmealVO getById(Long id);
+
+    /**
+     * 修改套餐
+     * @param setmealDTO
+     */
+    void updateWithDishes(SetmealDTO setmealDTO);
 }
