@@ -53,11 +53,13 @@ public class SetmealServiceImpl implements SetmealService {
         //保存套餐至数据库
         setmealMapper.insert(setmeal);
 
-        //用Mapper传回来的setmeal的id值赋值中间表实体类的setmealId
-        setmealDishes.forEach(setmealDish -> setmealDish.setSetmealId(setmeal.getId()));
+        if(setmealDishes != null && setmealDishes.size() > 0){
+            //用Mapper传回来的setmeal的id值赋值中间表实体类的setmealId
+            setmealDishes.forEach(setmealDish -> setmealDish.setSetmealId(setmeal.getId()));
 
-        //保存套餐菜品至数据库
-        setmealDishMapper.insertBatch(setmealDishes);
+            //保存套餐菜品至数据库
+            setmealDishMapper.insertBatch(setmealDishes);
+        }
     }
 
     /**
