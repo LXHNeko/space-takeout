@@ -1,7 +1,9 @@
 package com.sky.service;
 
 import com.sky.dto.SetmealDTO;
+import com.sky.dto.SetmealPageQueryDTO;
 import com.sky.mapper.SetmealMapper;
+import com.sky.result.PageResult;
 
 import java.util.List;
 
@@ -12,4 +14,17 @@ public interface SetmealService {
      * @param setmealDTO
      */
     void save(SetmealDTO setmealDTO);
+
+    /**
+     * 套餐分页查询
+     * @param setmealPageQueryDTO
+     * @return
+     */
+    PageResult page(SetmealPageQueryDTO setmealPageQueryDTO);
+
+    /**
+     * 删除套餐
+     * @param ids
+     */
+    void deleteByIds(List<Long> ids);
 }
