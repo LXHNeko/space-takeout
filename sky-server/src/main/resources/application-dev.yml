@@ -18,3 +18,6 @@ sky:
     region: cn-beijing
 #    access-key-id: ${OSS_ACCESS_KEY_ID:}
 #    access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
+  wechat:
+    appid: wxae56c42e630e254a
+    secret: 85195135995e6a863e82354549045b41
