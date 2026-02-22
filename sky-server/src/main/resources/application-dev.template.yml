@@ -1,23 +1,29 @@
+
+# Rename this file to application-dev.yml after it's done
+
 sky:
   datasource:
+#    if not mysql:
+#    driver-class-name: YOUR-DB-DRIVER-CLASS-NAME
     driver-class-name: com.mysql.cj.jdbc.Driver
-    host: localhost
-    port: 3306
-    database: sky_take_out
-    username: root
-    password: root
+    host: YOUR-DB-HOST
+    port: YOUR-DB-PORT
+    database: YOUR-DB-NAME
+    username: YOUR-DB-USERNAME
+    password: YOUR-DB-PASSWORD
   redis:
-    host: localhost
-    port: 6379
-    password: 123456
-    database: 10
+    host: YOUR-REDIS-HOST
+    port: YOUR-REDIS-PORT
+    password: YOUR-REDIS-PASSWORD
+    database: YOUR-REDIS-DB-NUMBER
 
   alioss:
-    endpoint: https://oss-cn-beijing.aliyuncs.com
-    bucket-name: space-takeout
-    region: cn-beijing
+    endpoint: YOUR-ENDPOINT
+    bucket-name: YOUR-BUCKET-NAME
+    region: YOUR-REGION
+#    from system path:
 #    access-key-id: ${OSS_ACCESS_KEY_ID:}
 #    access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
   wechat:
-    appid: YOUR_APPID_HERE
-    secret: YOUR_SECRET_HERE
+    appid: YOUR-APPID
+    secret: YOUR-SECRET
