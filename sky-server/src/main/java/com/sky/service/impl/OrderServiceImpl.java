@@ -214,46 +214,48 @@ public class OrderServiceImpl implements OrderService {
         if(Objects.equals(status, Orders.CONFIRMED)){
             throw new OrderBusinessException(MessageConstant.ORDER_ALREADY_CONFIRMED);
         }
+
         // 派送中状态下，用户取消订单需电话沟通商家
         if(Objects.equals(status, Orders.DELIVERY_IN_PROGRESS)){
             throw new OrderBusinessException(MessageConstant.ORDER_DELIVER_ON_THE_WAY);
         }
+
         // 如果是已完成的订单，依然不能直接取消
         if(Objects.equals(status, Orders.COMPLETED)){
             throw new OrderBusinessException(MessageConstant.ORDER_ALREADY_COMPLETED);
         }
+
         // 防止对已取消的订单重复操作
         if(Objects.equals(status, Orders.CANCELLED)){
             throw new OrderBusinessException(MessageConstant.ORDER_ALREADY_CANCELLED);
         }
 
-        Orders order = new Orders();
-
-        // 待支付和待接单状态下，用户可直接取消订单
-        if(Objects.equals(status, Orders.PENDING_PAYMENT) || Objects.equals(status, Orders.TO_BE_CONFIRMED)){
-
-            // 构建订单对象准备操作数据库进行订单修改操作
-            // 取消订单后需要将订单状态修改为“已取消”
-            order = Orders.builder()
-                    .id(id)
-                    .status(Orders.CANCELLED)
-                    .cancelTime(LocalDateTime.now())
-                    .cancelReason("用户取消")
-                    .build();
-
-            // 如果在待接单状态下取消订单，需要给用户退款
-            if(Objects.equals(status, Orders.TO_BE_CONFIRMED)){
-                try {
-                    // 个人测试环境，暂时将实际退款函数调用注释掉
-//                    weChatPayUtil.refund(currentOrder.getNumber(), currentOrder.getNumber(), currentOrder.getAmount(), currentOrder.getAmount());
-                    // 更新订单的支付状态
-                    order.setPayStatus(Orders.REFUND);
-                } catch (Exception e){
-                    throw new OrderBusinessException("订单取消失败");
-                }
-            }
+        // 其他意料外的异常状态，如99
+        if(!Objects.equals(status, Orders.PENDING_PAYMENT) && !Objects.equals(status, Orders.TO_BE_CONFIRMED)){
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
 
+        // 待支付和待接单状态下，用户可直接取消订单
+        // 构建订单对象准备操作数据库进行订单修改操作
+        // 取消订单后需要将订单状态修改为“已取消”
+        Orders order = Orders.builder()
+                .id(id)
+                .status(Orders.CANCELLED)
+                .cancelTime(LocalDateTime.now())
+                .cancelReason("用户取消")
+                .build();
+
+        // 如果在待接单状态下取消订单，需要给用户退款
+        if(Objects.equals(status, Orders.TO_BE_CONFIRMED)){
+            try {
+                // 个人测试环境，暂时将实际退款函数调用注释掉
+                // weChatPayUtil.refund(currentOrder.getNumber(), currentOrder.getNumber(), currentOrder.getAmount(), currentOrder.getAmount());
+                // 更新订单的支付状态
+                order.setPayStatus(Orders.REFUND);
+            } catch (Exception e){
+                throw new OrderBusinessException("订单取消失败，退款异常");
+            }
+        }
         orderMapper.update(order);
     }
 
