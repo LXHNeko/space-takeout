@@ -1,5 +1,6 @@
 package com.sky.service;
 
+import com.sky.dto.OrderIdDTO;
 import com.sky.dto.OrdersPageQueryDTO;
 import com.sky.dto.OrdersPaymentDTO;
 import com.sky.dto.OrdersSubmitDTO;
@@ -63,4 +64,10 @@ public interface OrderService {
      * @return
      */
     OrderStatisticsVO statistics();
+
+    /**
+     * 设置订单状态
+     * @param orderIdDTO
+     */
+    void setStatus(OrderIdDTO orderIdDTO);
 }

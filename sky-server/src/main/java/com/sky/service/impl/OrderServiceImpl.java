@@ -5,6 +5,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
 import com.sky.context.BaseContext;
+import com.sky.dto.OrderIdDTO;
 import com.sky.dto.OrdersPageQueryDTO;
 import com.sky.dto.OrdersPaymentDTO;
 import com.sky.dto.OrdersSubmitDTO;
@@ -302,6 +303,18 @@ public class OrderServiceImpl implements OrderService {
         orderStatisticsVO.setDeliveryInProgress(deliveryInProgress);
         orderStatisticsVO.setToBeConfirmed(toBeConfirmed);
         return orderStatisticsVO;
+    }
+
+    /**
+     * 设置订单状态
+     * @param orderIdDTO
+     */
+    @Override
+    public void setStatus(OrderIdDTO orderIdDTO) {
+        // 商家接单其实就是将订单的状态修改为“已接单”
+        Orders order = orderMapper.getById(orderIdDTO.getId());
+        order.setStatus(Orders.CONFIRMED);
+        orderMapper.update(order);
     }
 
     /**
