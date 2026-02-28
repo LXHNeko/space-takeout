@@ -46,6 +46,10 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private UserMapper userMapper;
     @Autowired
+    private DishMapper dishMapper;
+    @Autowired
+    private SetmealMapper setmealMapper;
+    @Autowired
     private WeChatPayUtil weChatPayUtil;
 
     /**
@@ -257,6 +261,37 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         orderMapper.update(order);
+    }
+
+    /**
+     * 再来一单
+     * @param id
+     */
+    @Override
+    public void orderAgain(Long id) {
+        // 获取当前用户ID
+        Long userId = BaseContext.getCurrentId();
+        // 再来一单就是将原订单中的商品重新加入到购物车中
+        // 先把订单详情列表查出来
+        List<OrderDetail> orderDetails = orderDetailMapper.getByOrderId(id);
+        if(orderDetails == null) throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+
+        // 再把详情一个个的封装到购物车并且操作数据库
+        for (OrderDetail orderDetail : orderDetails) {
+            // 必须在循环内部new对象，保证每件商品都是独立的
+            ShoppingCart shoppingCart = new ShoppingCart();
+
+            // 直接把 OrderDetail 里的同名属性（名字、图片、价格、数量、口味等）全部抄到购物车里
+            // 注意：一定要忽略 "id" 字段，因为订单详情的 id 和购物车的 id 是两码事
+            BeanUtils.copyProperties(orderDetail, shoppingCart, "id");
+
+            // 补充购物车特有的属性
+            shoppingCart.setUserId(userId);
+            shoppingCart.setCreateTime(LocalDateTime.now());
+
+            // 可以优化成批量插入
+            shoppingCartMapper.insert(shoppingCart);
+        }
     }
 
     /**
