@@ -20,6 +20,7 @@ import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import org.aspectj.weaver.ast.Or;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -80,6 +82,7 @@ public class OrderServiceImpl implements OrderService {
         orders.setNumber(String.valueOf(System.currentTimeMillis())); // 用时间戳当做订单号
         orders.setPhone(addressBook.getPhone());
         orders.setConsignee(addressBook.getConsignee());
+        orders.setAddress(addressBook.getProvinceName() + addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail());
         orders.setUserId(userId);
 
         orderMapper.insert(orders);
@@ -160,11 +163,18 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 历史订单查询
-     * @param ordersPageQueryDTO
+     * @param page
+     * @param pageSize
+     * @param status
      * @return
      */
     @Override
-    public PageResult page(OrdersPageQueryDTO ordersPageQueryDTO) {
+    public PageResult page(Integer page, Integer pageSize, Integer status) {
+        OrdersPageQueryDTO ordersPageQueryDTO = new OrdersPageQueryDTO();
+        ordersPageQueryDTO.setPage(page);
+        ordersPageQueryDTO.setPageSize(pageSize);
+        ordersPageQueryDTO.setStatus(status);
+
         PageHelper.startPage(ordersPageQueryDTO.getPage(), ordersPageQueryDTO.getPageSize());
         Page<Orders> ordersPage = orderMapper.page(ordersPageQueryDTO);
 
@@ -183,5 +193,92 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return new PageResult(ordersPage.getTotal(), voList);
+    }
+
+    /**
+     * 取消订单
+     * @param id
+     */
+    @Override
+    public void cancel(Long id) {
+        Orders currentOrder = orderMapper.getById(id);
+
+        // 先检查有没有这个订单
+        if(currentOrder == null){
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+
+        Integer status = currentOrder.getStatus();
+
+        // 商家已接单状态下，用户取消订单需电话沟通商家
+        if(Objects.equals(status, Orders.CONFIRMED)){
+            throw new OrderBusinessException(MessageConstant.ORDER_ALREADY_CONFIRMED);
+        }
+        // 派送中状态下，用户取消订单需电话沟通商家
+        if(Objects.equals(status, Orders.DELIVERY_IN_PROGRESS)){
+            throw new OrderBusinessException(MessageConstant.ORDER_DELIVER_ON_THE_WAY);
+        }
+        // 如果是已完成的订单，依然不能直接取消
+        if(Objects.equals(status, Orders.COMPLETED)){
+            throw new OrderBusinessException(MessageConstant.ORDER_ALREADY_COMPLETED);
+        }
+        // 防止对已取消的订单重复操作
+        if(Objects.equals(status, Orders.CANCELLED)){
+            throw new OrderBusinessException(MessageConstant.ORDER_ALREADY_CANCELLED);
+        }
+
+        Orders order = new Orders();
+
+        // 待支付和待接单状态下，用户可直接取消订单
+        if(Objects.equals(status, Orders.PENDING_PAYMENT) || Objects.equals(status, Orders.TO_BE_CONFIRMED)){
+
+            // 构建订单对象准备操作数据库进行订单修改操作
+            // 取消订单后需要将订单状态修改为“已取消”
+            order = Orders.builder()
+                    .id(id)
+                    .status(Orders.CANCELLED)
+                    .cancelTime(LocalDateTime.now())
+                    .cancelReason("用户取消")
+                    .build();
+
+            // 如果在待接单状态下取消订单，需要给用户退款
+            if(Objects.equals(status, Orders.TO_BE_CONFIRMED)){
+                try {
+                    // 个人测试环境，暂时将实际退款函数调用注释掉
+//                    weChatPayUtil.refund(currentOrder.getNumber(), currentOrder.getNumber(), currentOrder.getAmount(), currentOrder.getAmount());
+                    // 更新订单的支付状态
+                    order.setPayStatus(Orders.REFUND);
+                } catch (Exception e){
+                    throw new OrderBusinessException("订单取消失败");
+                }
+            }
+        }
+
+        orderMapper.update(order);
+    }
+
+    /**
+     * 查询订单详情
+     * @param id
+     * @return
+     */
+    @Override
+    public OrderVO orderDetail(Long id) {
+        //根据订单id查询订单
+        Orders order = orderMapper.getById(id);
+
+        //根据订单id查询可能包含多个的订单详情
+        List<OrderDetail> orderDetails = orderDetailMapper.getByOrderId(id);
+
+        //打包vo
+        OrderVO orderVO = new OrderVO();
+        if (order == null) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+        BeanUtils.copyProperties(order, orderVO);
+        orderVO.setOrderDetailList(orderDetails);
+
+        //返回
+        return orderVO;
     }
 }

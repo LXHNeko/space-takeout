@@ -25,6 +25,10 @@ public class MessageConstant {
     public static final String SETMEAL_ON_SALE = "起售中的套餐不能删除";
     public static final String DISH_BE_RELATED_BY_SETMEAL = "当前菜品关联了套餐,不能删除";
     public static final String ORDER_STATUS_ERROR = "订单状态错误";
+    public static final String ORDER_ALREADY_CONFIRMED = "订单已被接单，请联系商家进行沟通";
+    public static final String ORDER_DELIVER_ON_THE_WAY = "订单正在被派送，请联系商家进行沟通";
+    public static final String ORDER_ALREADY_COMPLETED = "订单已完成，请联系商家进行沟通";
+    public static final String ORDER_ALREADY_CANCELLED = "订单已取消，请不要重复操作";
     public static final String ORDER_NOT_FOUND = "订单不存在";
 
 }
