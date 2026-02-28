@@ -5,10 +5,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
 import com.sky.context.BaseContext;
-import com.sky.dto.OrderIdDTO;
-import com.sky.dto.OrdersPageQueryDTO;
-import com.sky.dto.OrdersPaymentDTO;
-import com.sky.dto.OrdersSubmitDTO;
+import com.sky.dto.*;
 import com.sky.entity.*;
 import com.sky.exception.AddressBookBusinessException;
 import com.sky.exception.OrderBusinessException;
@@ -306,15 +303,47 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 设置订单状态
+     * 接单
      * @param orderIdDTO
      */
     @Override
-    public void setStatus(OrderIdDTO orderIdDTO) {
+    public void confirm(OrderIdDTO orderIdDTO) {
         // 商家接单其实就是将订单的状态修改为“已接单”
         Orders order = orderMapper.getById(orderIdDTO.getId());
         order.setStatus(Orders.CONFIRMED);
         orderMapper.update(order);
+    }
+
+    /**
+     * 拒单
+     * @param ordersRejectionDTO
+     */
+    @Override
+    public void reject(OrdersRejectionDTO ordersRejectionDTO) {
+        Orders currentOrder = orderMapper.getById(ordersRejectionDTO.getId());
+        // 只有订单处于“待接单”状态时可以执行拒单操作
+        if(orderMapper.getById(ordersRejectionDTO.getId()).getStatus() != Orders.TO_BE_CONFIRMED){
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+        // 商家拒单其实就是将订单状态修改为“已取消”
+        Orders newStatusOrder = Orders.builder()
+                .id(ordersRejectionDTO.getId())
+                .rejectionReason(ordersRejectionDTO.getRejectionReason()) // 商家拒单时需要指定拒单原因
+                .status(Orders.CANCELLED)
+                .build();
+
+        // 商家拒单时，如果用户已经完成了支付，需要为用户退款
+        if(Objects.equals(currentOrder.getPayStatus(), Orders.PAID)){
+            try {
+                // 个人测试环境，暂时将实际退款函数调用注释掉
+                // weChatPayUtil.refund(currentOrder.getNumber(), currentOrder.getNumber(), currentOrder.getAmount(), currentOrder.getAmount());
+                // 更新订单的支付状态
+                newStatusOrder.setPayStatus(Orders.REFUND);
+            } catch (Exception e){
+                throw new OrderBusinessException("订单取消失败，退款异常");
+            }
+        }
+        orderMapper.update(newStatusOrder);
     }
 
     /**
