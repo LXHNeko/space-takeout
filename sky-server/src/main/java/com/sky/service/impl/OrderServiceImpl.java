@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -295,10 +296,12 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void confirm(OrdersConfirmDTO ordersConfirmDTO) {
+        Orders currentOrder = orderMapper.getById(ordersConfirmDTO.getId());
+        // 先判断订单是否存在
+        if(currentOrder == null) throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         // 商家接单其实就是将订单的状态修改为“已接单”
-        Orders order = orderMapper.getById(ordersConfirmDTO.getId());
-        order.setStatus(Orders.CONFIRMED);
-        orderMapper.update(order);
+        currentOrder.setStatus(Orders.CONFIRMED);
+        orderMapper.update(currentOrder);
     }
 
     /**
@@ -308,6 +311,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void reject(OrdersRejectionDTO ordersRejectionDTO) {
         Orders currentOrder = orderMapper.getById(ordersRejectionDTO.getId());
+        // 先判断订单是否存在
+        if(currentOrder == null) throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         // 只有订单处于“待接单”状态时可以执行拒单操作
         if(Objects.equals(currentOrder.getStatus(), Orders.TO_BE_CONFIRMED)){
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
@@ -330,6 +335,9 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void adminCancel(OrdersCancelDTO ordersCancelDTO) {
+        Orders currentOrder = orderMapper.getById(ordersCancelDTO.getId());
+        // 先判断订单是否存在
+        if(currentOrder == null) throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         // 取消订单其实就是将订单状态修改为“已取消”
         Orders orderToUpdate = Orders.builder()
                 .id(ordersCancelDTO.getId())
@@ -338,7 +346,6 @@ public class OrderServiceImpl implements OrderService {
                 .cancelTime(LocalDateTime.now())
                 .build();
 
-        Orders currentOrder = orderMapper.getById(ordersCancelDTO.getId());
         // 商家取消订单时，如果用户已经完成了支付，需要为用户退款
         refundIfPaid(currentOrder, orderToUpdate);
         orderMapper.update(orderToUpdate);
@@ -351,6 +358,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void deliver(Long id) {
         Orders currentOrder = orderMapper.getById(id);
+        // 先判断订单是否存在
+        if(currentOrder == null) throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         // 只有状态为“待派送”的订单可以执行派送订单操作
         if(!Objects.equals(currentOrder.getStatus(), Orders.CONFIRMED)){
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
@@ -359,7 +368,29 @@ public class OrderServiceImpl implements OrderService {
         Orders orderToUpdate = Orders.builder()
                 .id(id)
                 .status(Orders.DELIVERY_IN_PROGRESS)
-                .cancelTime(LocalDateTime.now())
+                .estimatedDeliveryTime(LocalDateTime.now().plusHours(1))
+                .build();
+        orderMapper.update(orderToUpdate);
+    }
+
+    /**
+     * 完成订单
+     * @param id
+     */
+    @Override
+    public void complete(Long id) {
+        Orders currentOrder = orderMapper.getById(id);
+        // 先判断订单是否存在
+        if(currentOrder == null) throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        // 只有状态为“派送中”的订单可以执行订单完成操作
+        if(!Objects.equals(currentOrder.getStatus(), Orders.DELIVERY_IN_PROGRESS)){
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+        // 完成订单其实就是将订单状态修改为“已完成”
+        Orders orderToUpdate = Orders.builder()
+                .id(id)
+                .status(Orders.COMPLETED)
+                .deliveryTime(LocalDateTime.now())
                 .build();
         orderMapper.update(orderToUpdate);
     }
