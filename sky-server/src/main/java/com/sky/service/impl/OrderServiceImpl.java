@@ -345,6 +345,26 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
+     * 派送订单
+     * @param id
+     */
+    @Override
+    public void deliver(Long id) {
+        Orders currentOrder = orderMapper.getById(id);
+        // 只有状态为“待派送”的订单可以执行派送订单操作
+        if(!Objects.equals(currentOrder.getStatus(), Orders.CONFIRMED)){
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+        // 派送订单其实就是将订单状态修改为“派送中”
+        Orders orderToUpdate = Orders.builder()
+                .id(id)
+                .status(Orders.DELIVERY_IN_PROGRESS)
+                .cancelTime(LocalDateTime.now())
+                .build();
+        orderMapper.update(orderToUpdate);
+    }
+
+    /**
      * 内部通用方法：判断是否需要退款，如果需要则执行退款并修改支付状态
      * @param currentOrder 数据库里查出来的老订单
      * @param orderToUpdate 准备要去更新的新订单对象
