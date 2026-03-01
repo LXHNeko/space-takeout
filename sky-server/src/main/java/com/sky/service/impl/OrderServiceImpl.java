@@ -44,10 +44,6 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private UserMapper userMapper;
     @Autowired
-    private DishMapper dishMapper;
-    @Autowired
-    private SetmealMapper setmealMapper;
-    @Autowired
     private WeChatPayUtil weChatPayUtil;
 
     /**
@@ -234,7 +230,7 @@ public class OrderServiceImpl implements OrderService {
         // 待支付和待接单状态下，用户可直接取消订单
         // 构建订单对象准备操作数据库进行订单修改操作
         // 取消订单后需要将订单状态修改为“已取消”
-        Orders order = Orders.builder()
+        Orders orderToUpdate = Orders.builder()
                 .id(id)
                 .status(Orders.CANCELLED)
                 .cancelTime(LocalDateTime.now())
@@ -242,17 +238,8 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         // 如果在待接单状态下取消订单，需要给用户退款
-        if(Objects.equals(status, Orders.TO_BE_CONFIRMED)){
-            try {
-                // 个人测试环境，暂时将实际退款函数调用注释掉
-                // weChatPayUtil.refund(currentOrder.getNumber(), currentOrder.getNumber(), currentOrder.getAmount(), currentOrder.getAmount());
-                // 更新订单的支付状态
-                order.setPayStatus(Orders.REFUND);
-            } catch (Exception e){
-                throw new OrderBusinessException("订单取消失败，退款异常");
-            }
-        }
-        orderMapper.update(order);
+        refundIfPaid(currentOrder, orderToUpdate);
+        orderMapper.update(orderToUpdate);
     }
 
     /**
@@ -304,12 +291,12 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 接单
-     * @param orderIdDTO
+     * @param ordersConfirmDTO
      */
     @Override
-    public void confirm(OrderIdDTO orderIdDTO) {
+    public void confirm(OrdersConfirmDTO ordersConfirmDTO) {
         // 商家接单其实就是将订单的状态修改为“已接单”
-        Orders order = orderMapper.getById(orderIdDTO.getId());
+        Orders order = orderMapper.getById(ordersConfirmDTO.getId());
         order.setStatus(Orders.CONFIRMED);
         orderMapper.update(order);
     }
@@ -322,28 +309,59 @@ public class OrderServiceImpl implements OrderService {
     public void reject(OrdersRejectionDTO ordersRejectionDTO) {
         Orders currentOrder = orderMapper.getById(ordersRejectionDTO.getId());
         // 只有订单处于“待接单”状态时可以执行拒单操作
-        if(orderMapper.getById(ordersRejectionDTO.getId()).getStatus() != Orders.TO_BE_CONFIRMED){
+        if(Objects.equals(currentOrder.getStatus(), Orders.TO_BE_CONFIRMED)){
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
         // 商家拒单其实就是将订单状态修改为“已取消”
-        Orders newStatusOrder = Orders.builder()
+        Orders orderToUpdate = Orders.builder()
                 .id(ordersRejectionDTO.getId())
                 .rejectionReason(ordersRejectionDTO.getRejectionReason()) // 商家拒单时需要指定拒单原因
                 .status(Orders.CANCELLED)
                 .build();
 
         // 商家拒单时，如果用户已经完成了支付，需要为用户退款
+        refundIfPaid(currentOrder, orderToUpdate);
+        orderMapper.update(orderToUpdate);
+    }
+
+    /**
+     * 商家取消订单
+     * @param ordersCancelDTO
+     */
+    @Override
+    public void adminCancel(OrdersCancelDTO ordersCancelDTO) {
+        // 取消订单其实就是将订单状态修改为“已取消”
+        Orders orderToUpdate = Orders.builder()
+                .id(ordersCancelDTO.getId())
+                .status(Orders.CANCELLED)
+                .cancelReason(ordersCancelDTO.getCancelReason()) // 商家取消订单时需要指定取消原因
+                .cancelTime(LocalDateTime.now())
+                .build();
+
+        Orders currentOrder = orderMapper.getById(ordersCancelDTO.getId());
+        // 商家取消订单时，如果用户已经完成了支付，需要为用户退款
+        refundIfPaid(currentOrder, orderToUpdate);
+        orderMapper.update(orderToUpdate);
+    }
+
+    /**
+     * 内部通用方法：判断是否需要退款，如果需要则执行退款并修改支付状态
+     * @param currentOrder 数据库里查出来的老订单
+     * @param orderToUpdate 准备要去更新的新订单对象
+     */
+    private void refundIfPaid(Orders currentOrder, Orders orderToUpdate) {
+        // 只要这个订单之前付过钱，不管是谁取消的，统统退款！
         if(Objects.equals(currentOrder.getPayStatus(), Orders.PAID)){
             try {
                 // 个人测试环境，暂时将实际退款函数调用注释掉
                 // weChatPayUtil.refund(currentOrder.getNumber(), currentOrder.getNumber(), currentOrder.getAmount(), currentOrder.getAmount());
-                // 更新订单的支付状态
-                newStatusOrder.setPayStatus(Orders.REFUND);
+
+                // 钱退了，把准备更新的订单支付状态设为 退款
+                orderToUpdate.setPayStatus(Orders.REFUND);
             } catch (Exception e){
                 throw new OrderBusinessException("订单取消失败，退款异常");
             }
         }
-        orderMapper.update(newStatusOrder);
     }
 
     /**

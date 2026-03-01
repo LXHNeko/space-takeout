@@ -64,13 +64,19 @@ public interface OrderService {
 
     /**
      * 接单
-     * @param orderIdDTO
+     * @param ordersConfirmDTO
      */
-    void confirm(OrderIdDTO orderIdDTO);
+    void confirm(OrdersConfirmDTO ordersConfirmDTO);
 
     /**
      * 拒单
      * @param ordersRejectionDTO
      */
     void reject(OrdersRejectionDTO ordersRejectionDTO);
+
+    /**
+     * 商家取消订单
+     * @param ordersCancelDTO
+     */
+    void adminCancel(OrdersCancelDTO ordersCancelDTO);
 }
