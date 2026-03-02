@@ -22,6 +22,7 @@ import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
 import com.sky.websocket.WebSocketServer;
+import lombok.extern.slf4j.Slf4j;
 import org.aspectj.weaver.ast.Or;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
+@Slf4j
 public class OrderServiceImpl implements OrderService {
 
     @Autowired
@@ -133,7 +135,7 @@ public class OrderServiceImpl implements OrderService {
      * @return
      */
     public OrderPaymentVO payment(OrdersPaymentDTO ordersPaymentDTO) throws Exception {
-        // 当前登录用户id
+/*        // 当前登录用户id
         Long userId = BaseContext.getCurrentId();
         User user = userMapper.getById(userId);
 
@@ -150,7 +152,21 @@ public class OrderServiceImpl implements OrderService {
         }
 
         OrderPaymentVO vo = jsonObject.toJavaObject(OrderPaymentVO.class);
-        vo.setPackageStr(jsonObject.getString("package"));
+        vo.setPackageStr(jsonObject.getString("package"));*/
+
+        log.info("【模拟支付】跳过微信支付接口，直接修改订单状态为已支付");
+
+        // 【模拟支付】: 直接调用同类下的 paySuccess 方法
+        // 这一步会直接去数据库把订单状态改成已支付、待接单，并触发WebSocket语音播报
+        paySuccess(ordersPaymentDTO.getOrderNumber());
+
+        // 【模拟支付】: 随便塞点假数据给前端，假装成功拿到了微信的预支付交易单
+        OrderPaymentVO vo = new OrderPaymentVO();
+        vo.setNonceStr("666666");
+        vo.setPaySign("mock_sign");
+        vo.setPackageStr("prepay_id=mock_id");
+        vo.setSignType("RSA");
+        vo.setTimeStamp(String.valueOf(System.currentTimeMillis() / 1000));
 
         return vo;
     }
