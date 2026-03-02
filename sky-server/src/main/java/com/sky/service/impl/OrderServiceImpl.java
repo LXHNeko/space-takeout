@@ -356,7 +356,7 @@ public class OrderServiceImpl implements OrderService {
         // 先判断订单是否存在
         if(currentOrder == null) throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         // 只有订单处于“待接单”状态时可以执行拒单操作
-        if(Objects.equals(currentOrder.getStatus(), Orders.TO_BE_CONFIRMED)){
+        if(!Objects.equals(currentOrder.getStatus(), Orders.TO_BE_CONFIRMED)){
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
         // 商家拒单其实就是将订单状态修改为“已取消”

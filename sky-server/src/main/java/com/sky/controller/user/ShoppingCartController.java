@@ -52,7 +52,7 @@ public class ShoppingCartController {
      * 清空购物车
      * @return
      */
-    @DeleteMapping
+    @DeleteMapping("/clean")
     @ApiOperation("清空购物车")
     public Result clean(){
         shoppingCartService.cleanShoppingCart();
