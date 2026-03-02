@@ -30,5 +30,6 @@ public class MessageConstant {
     public static final String ORDER_ALREADY_COMPLETED = "订单已完成，请联系商家进行沟通";
     public static final String ORDER_ALREADY_CANCELLED = "订单已取消，请不要重复操作";
     public static final String ORDER_NOT_FOUND = "订单不存在";
+    public static final String ORDER_TIME_OUT_FOR_PAYMENT = "订单长时间未付款，自动超时取消";
 
 }
