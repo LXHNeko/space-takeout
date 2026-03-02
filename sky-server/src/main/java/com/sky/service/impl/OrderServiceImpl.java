@@ -422,6 +422,26 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
+     * 客户催单
+     * @param id
+     */
+    @Override
+    public void reminder(Long id) {
+        Orders currentOrder = orderMapper.getById(id);
+        // 先判断订单是否存在
+        if(currentOrder == null) throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+
+        Map map = new HashMap();
+        map.put("type", 2); // 1:来单提醒 2:客户催单
+        map.put("orderId", id);
+        map.put("content", "订单号: " + currentOrder.getNumber());
+        String json = JSON.toJSONString(map);
+
+        // 通过websocket向客户端浏览器发送消息
+        webSocketServer.sendToAllClient(json);
+    }
+
+    /**
      * 内部通用方法：判断是否需要退款，如果需要则执行退款并修改支付状态
      * @param currentOrder 数据库里查出来的老订单
      * @param orderToUpdate 准备要去更新的新订单对象
