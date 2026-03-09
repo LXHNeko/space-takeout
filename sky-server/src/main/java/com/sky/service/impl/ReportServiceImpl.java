@@ -5,14 +5,19 @@ import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
 import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
-import com.sky.vo.OrderReportVO;
-import com.sky.vo.SalesTop10ReportVO;
-import com.sky.vo.TurnoverReportVO;
-import com.sky.vo.UserReportVO;
+import com.sky.service.WorkspaceService;
+import com.sky.vo.*;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -26,6 +31,8 @@ public class ReportServiceImpl implements ReportService {
     OrderMapper orderMapper;
     @Autowired
     UserMapper userMapper;
+    @Autowired
+    private WorkspaceService workspaceService;
 
     /**
      * 统计指定时间区间内的营业额数据
@@ -203,6 +210,71 @@ public class ReportServiceImpl implements ReportService {
                 .nameList(nameList)
                 .numberList(numberList)
                 .build();
+    }
+
+    /**
+     * 导出运营数据报表
+     * @param response
+     */
+    @Override
+    public void exportBusinessData(HttpServletResponse response) {
+        // 1.查询数据库，获取营业数据
+        LocalDate dateBegin = LocalDate.now().minusDays(30);
+        LocalDate dateEnd = LocalDate.now().minusDays(1);
+        LocalDateTime begin = LocalDateTime.of(dateBegin, LocalTime.MIN);
+        LocalDateTime end = LocalDateTime.of(dateEnd, LocalTime.MAX);
+        BusinessDataVO businessDataVO = workspaceService.getBusinessData(begin, end);
+
+        // 2.通过POI将数据写到Excel文件中
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("template/运营数据报表模板.xlsx");
+
+        if(inputStream == null){
+            throw new RuntimeException("Template file not found. Check [resources/template/]");
+        }
+
+        // 基于模板文件来创建一个新的excel文件
+        try (XSSFWorkbook excel = new XSSFWorkbook(inputStream)) {
+            // 获取文件的标签页
+            XSSFSheet sheet = excel.getSheet("sheet1");
+            // 填充数据: 时间
+            sheet.getRow(1).getCell(1).setCellValue("时间: " + dateBegin + "至" + dateEnd);
+            // 获得第四行
+            XSSFRow row = sheet.getRow(3);
+            row.getCell(2).setCellValue(businessDataVO.getTurnover()); // 营业额
+            row.getCell(4).setCellValue(businessDataVO.getOrderCompletionRate()); // 订单完成率
+            row.getCell(6).setCellValue(businessDataVO.getNewUsers()); // 新增用户数
+
+            // 获得第五行
+            row = sheet.getRow(4);
+            row.getCell(2).setCellValue(businessDataVO.getValidOrderCount()); // 有效订单数
+            row.getCell(4).setCellValue(businessDataVO.getUnitPrice()); // 平均客单价
+
+            // 填充明细数据
+            for (int i = 0; i < 30; i++) {
+                LocalDate date = dateBegin.plusDays(i);
+                workspaceService.getBusinessData(LocalDateTime.of(date, LocalTime.MIN), LocalDateTime.of(date, LocalTime.MAX));
+
+                // 获得某一行 (7+i行)
+                row = sheet.getRow(7 + i);
+                row.getCell(1).setCellValue(date.toString());
+                row.getCell(2).setCellValue(businessDataVO.getTurnover());
+                row.getCell(3).setCellValue(businessDataVO.getValidOrderCount());
+                row.getCell(4).setCellValue(businessDataVO.getOrderCompletionRate());
+                row.getCell(5).setCellValue(businessDataVO.getUnitPrice());
+                row.getCell(6).setCellValue(businessDataVO.getNewUsers());
+
+            }
+
+            // 3.通过输出流将Excel文件下载到客户端浏览器
+            ServletOutputStream outputStream = response.getOutputStream();
+            excel.write(outputStream);
+            outputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+
     }
 
     /**
